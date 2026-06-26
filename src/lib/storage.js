@@ -1,7 +1,11 @@
-export const getLogs  = () => JSON.parse(localStorage.getItem('fcs_logs')  || '[]')
-export const saveLogs = l  => localStorage.setItem('fcs_logs',  JSON.stringify(l))
-export const getUsers = () => JSON.parse(localStorage.getItem('fcs_users') || '{}')
-export const saveUsers= u  => localStorage.setItem('fcs_users', JSON.stringify(u))
+export const getLogs      = () => JSON.parse(localStorage.getItem('fcs_logs')     || '[]')
+export const saveLogs     = l  => localStorage.setItem('fcs_logs',     JSON.stringify(l))
+export const getUsers     = () => JSON.parse(localStorage.getItem('fcs_users')    || '{}')
+export const saveUsers    = u  => localStorage.setItem('fcs_users',    JSON.stringify(u))
+
+const DEFAULT_SETTINGS = { timerSeconds: 60, minScrap: 7 }
+export const getSettings  = () => ({ ...DEFAULT_SETTINGS, ...JSON.parse(localStorage.getItem('fcs_settings') || '{}') })
+export const saveSettings = s  => localStorage.setItem('fcs_settings', JSON.stringify(s))
 
 export function getUserStats(noreg) {
   const logs  = getLogs().filter(l => l.noreg === noreg)

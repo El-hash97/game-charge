@@ -1,14 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { TAKT_TIME, generateMaterials, fmtTime, calcScore } from '../lib/game.js'
+import { DEFAULT_TAKT_TIME, DEFAULT_MIN_SCRAP, generateMaterials, fmtTime, calcScore } from '../lib/game.js'
 import { playSound } from '../lib/audio.js'
 import Confetti from '../components/Confetti.jsx'
 import LineStopOverlay from '../components/LineStopOverlay.jsx'
 
 export default function GameScreen({ config, onEnd, onQuit, showToast }) {
-  const { mode, target } = config
+  const { mode, target, timerSeconds = DEFAULT_TAKT_TIME, minScrap = DEFAULT_MIN_SCRAP } = config
 
   const [gs, setGs] = useState(() => ({
-    materials:    generateMaterials(target),
+    materials:    generateMaterials(target, minScrap),
     idx:          0,
     accumulated:  0,
     score:        0,
@@ -19,7 +19,7 @@ export default function GameScreen({ config, onEnd, onQuit, showToast }) {
     lineStop:     false,
     done:         false,
     startTime:    Date.now(),
-    timeLeft:     TAKT_TIME,
+    timeLeft:     timerSeconds,
   }))
 
   const [ansVal, setAnsVal]             = useState('')

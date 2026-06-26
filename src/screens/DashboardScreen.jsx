@@ -1,11 +1,12 @@
-import { getUserStats, getLeaderboard, getLogs } from '../lib/storage.js'
+import { getUserStats, getLeaderboard, getLogs, getSettings } from '../lib/storage.js'
 
 const MEDALS = ['🥇', '🥈', '🥉']
 
-export default function DashboardScreen({ currentUser, onMode, onLogout, onLeaderboard }) {
-  const stats   = getUserStats(currentUser.noreg)
-  const lb      = getLeaderboard().slice(0, 3)
-  const history = getLogs()
+export default function DashboardScreen({ currentUser, onMode, onLogout, onLeaderboard, onSettings }) {
+  const stats    = getUserStats(currentUser.noreg)
+  const lb       = getLeaderboard().slice(0, 3)
+  const settings = getSettings()
+  const history  = getLogs()
     .filter(l => l.noreg === currentUser.noreg)
     .sort((a, b) => b.ts - a.ts)
     .slice(0, 5)
@@ -23,7 +24,8 @@ export default function DashboardScreen({ currentUser, onMode, onLogout, onLeade
           <p className="text-[10px] text-text2 mt-[1px]">{dateStr}</p>
         </div>
         <button onClick={onLeaderboard} className="w-9 h-9 flex items-center justify-center rounded-md text-text2 text-base active:bg-bg3 active:text-text transition-colors">🏆</button>
-        <button onClick={onLogout}      className="w-9 h-9 flex items-center justify-center rounded-md text-text2 text-sm   active:bg-bg3 active:text-text transition-colors">⏏</button>
+        <button onClick={onSettings}   className="w-9 h-9 flex items-center justify-center rounded-md text-text2 text-base active:bg-bg3 active:text-text transition-colors">⚙️</button>
+        <button onClick={onLogout}     className="w-9 h-9 flex items-center justify-center rounded-md text-text2 text-sm   active:bg-bg3 active:text-text transition-colors">⏏</button>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4">
@@ -78,7 +80,7 @@ export default function DashboardScreen({ currentUser, onMode, onLogout, onLeade
             <div className="w-12 h-12 rounded-xl bg-red/10 flex items-center justify-center text-2xl flex-shrink-0">⚡</div>
             <div className="flex-1">
               <div className="text-sm font-black mb-1">Takt Time Challenge</div>
-              <div className="text-[12px] text-text2 leading-snug">Timer 60 detik. Simulasi tekanan produksi nyata. Awas LINE STOP!</div>
+              <div className="text-[12px] text-text2 leading-snug">Timer {settings.timerSeconds} detik · Min {settings.minScrap}x scrap. Simulasi tekanan produksi nyata. Awas LINE STOP!</div>
             </div>
             <span className="text-text3 text-lg">›</span>
           </button>

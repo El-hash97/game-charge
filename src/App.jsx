@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
-import { getUsers, saveUsers, getLogs, saveLogs } from './lib/storage.js'
+import { getUsers, saveUsers, getLogs, saveLogs, getSettings } from './lib/storage.js'
 import LoginScreen from './screens/LoginScreen.jsx'
 import DashboardScreen from './screens/DashboardScreen.jsx'
 import GameScreen from './screens/GameScreen.jsx'
 import ResultScreen from './screens/ResultScreen.jsx'
 import LeaderboardScreen from './screens/LeaderboardScreen.jsx'
+import SettingsScreen from './screens/SettingsScreen.jsx'
 import TargetModal from './components/TargetModal.jsx'
 import Toast from './components/Toast.jsx'
 
@@ -62,9 +63,10 @@ export default function App() {
   }
 
   function confirmTarget(target) {
+    const { timerSeconds, minScrap } = getSettings()
     setShowModal(false)
     setCurrentMode(pendingMode)
-    setGameConfig({ mode: pendingMode, target })
+    setGameConfig({ mode: pendingMode, target, timerSeconds, minScrap })
     setScreen('game')
   }
 
@@ -103,6 +105,7 @@ export default function App() {
           onMode={openTargetModal}
           onLogout={doLogout}
           onLeaderboard={() => setScreen('leaderboard')}
+          onSettings={() => setScreen('settings')}
           showToast={showToast}
         />
       )}
@@ -125,6 +128,12 @@ export default function App() {
       {screen === 'leaderboard' && (
         <LeaderboardScreen
           currentUser={currentUser}
+          onBack={goToDashboard}
+          showToast={showToast}
+        />
+      )}
+      {screen === 'settings' && (
+        <SettingsScreen
           onBack={goToDashboard}
           showToast={showToast}
         />
