@@ -3,9 +3,11 @@ import { getUsers, saveUsers, getLogs, saveLogs, getSettings } from './lib/stora
 import LoginScreen from './screens/LoginScreen.jsx'
 import DashboardScreen from './screens/DashboardScreen.jsx'
 import GameScreen from './screens/GameScreen.jsx'
+import CountingGameScreen from './screens/CountingGameScreen.jsx'
 import ResultScreen from './screens/ResultScreen.jsx'
 import LeaderboardScreen from './screens/LeaderboardScreen.jsx'
 import SettingsScreen from './screens/SettingsScreen.jsx'
+import PerformanceScreen from './screens/PerformanceScreen.jsx'
 import TargetModal from './components/TargetModal.jsx'
 import Toast from './components/Toast.jsx'
 
@@ -58,6 +60,13 @@ export default function App() {
   }
 
   function openTargetModal(mode) {
+    if (mode === 'counting') {
+      const { minScrap } = getSettings()
+      setCurrentMode(mode)
+      setGameConfig({ mode, target: 0, timerSeconds: 0, minScrap })
+      setScreen('game')
+      return
+    }
     setPendingMode(mode)
     setShowModal(true)
   }
@@ -106,11 +115,21 @@ export default function App() {
           onLogout={doLogout}
           onLeaderboard={() => setScreen('leaderboard')}
           onSettings={() => setScreen('settings')}
+          onPerformance={() => setScreen('performance')}
           showToast={showToast}
         />
       )}
-      {screen === 'game' && (
+      {screen === 'game' && gameConfig?.mode !== 'counting' && (
         <GameScreen
+          config={gameConfig}
+          currentUser={currentUser}
+          onEnd={handleGameEnd}
+          onQuit={goToDashboard}
+          showToast={showToast}
+        />
+      )}
+      {screen === 'game' && gameConfig?.mode === 'counting' && (
+        <CountingGameScreen
           config={gameConfig}
           currentUser={currentUser}
           onEnd={handleGameEnd}
@@ -136,6 +155,12 @@ export default function App() {
         <SettingsScreen
           onBack={goToDashboard}
           showToast={showToast}
+        />
+      )}
+      {screen === 'performance' && (
+        <PerformanceScreen
+          currentUser={currentUser}
+          onBack={goToDashboard}
         />
       )}
 

@@ -2,7 +2,7 @@ import { getUserStats, getLeaderboard, getLogs, getSettings } from '../lib/stora
 
 const MEDALS = ['🥇', '🥈', '🥉']
 
-export default function DashboardScreen({ currentUser, onMode, onLogout, onLeaderboard, onSettings }) {
+export default function DashboardScreen({ currentUser, onMode, onLogout, onLeaderboard, onSettings, onPerformance }) {
   const stats    = getUserStats(currentUser.noreg)
   const lb       = getLeaderboard().slice(0, 3)
   const settings = getSettings()
@@ -23,6 +23,7 @@ export default function DashboardScreen({ currentUser, onMode, onLogout, onLeade
           <h2 className="text-[13px] font-black tracking-[0.3px] leading-tight">Charging Simulator</h2>
           <p className="text-[10px] text-text2 mt-[1px]">{dateStr}</p>
         </div>
+        <button onClick={onPerformance} className="w-9 h-9 flex items-center justify-center rounded-md text-text2 text-base active:bg-bg3 active:text-text transition-colors">📊</button>
         <button onClick={onLeaderboard} className="w-9 h-9 flex items-center justify-center rounded-md text-text2 text-base active:bg-bg3 active:text-text transition-colors">🏆</button>
         <button onClick={onSettings}   className="w-9 h-9 flex items-center justify-center rounded-md text-text2 text-base active:bg-bg3 active:text-text transition-colors">⚙️</button>
         <button onClick={onLogout}     className="w-9 h-9 flex items-center justify-center rounded-md text-text2 text-sm   active:bg-bg3 active:text-text transition-colors">⏏</button>
@@ -84,6 +85,17 @@ export default function DashboardScreen({ currentUser, onMode, onLogout, onLeade
             </div>
             <span className="text-text3 text-lg">›</span>
           </button>
+          <button
+            onClick={() => onMode('counting')}
+            className="flex items-center gap-4 bg-bg2 border border-border-dark rounded-xl p-4 text-left w-full active:bg-bg3 active:border-red transition-all"
+          >
+            <div className="w-12 h-12 rounded-xl bg-yellow/10 flex items-center justify-center text-2xl flex-shrink-0">🔢</div>
+            <div className="flex-1">
+              <div className="text-sm font-black mb-1">Mode Hitung</div>
+              <div className="text-[12px] text-text2 leading-snug">{settings.minScrap}x angka muncul tiap 5 detik. Hafal lalu jumlahkan! Salah = LINE STOP!</div>
+            </div>
+            <span className="text-text3 text-lg">›</span>
+          </button>
         </div>
 
         {/* Leaderboard preview */}
@@ -107,7 +119,10 @@ export default function DashboardScreen({ currentUser, onMode, onLogout, onLeade
         </div>
 
         {/* History */}
-        <p className="text-[10px] font-bold text-text2 uppercase tracking-[1.2px] mb-2">Riwayat Latihan</p>
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-[10px] font-bold text-text2 uppercase tracking-[1.2px]">Riwayat Latihan</p>
+          <button onClick={onPerformance} className="text-[12px] text-red">Lihat Semua ›</button>
+        </div>
         {history.length === 0 ? (
           <div className="text-center py-7 text-text3 text-[12px]">
             <div className="text-4xl mb-2">📋</div>
@@ -117,10 +132,10 @@ export default function DashboardScreen({ currentUser, onMode, onLogout, onLeade
           <div className="flex flex-col gap-2 mb-4">
             {history.map(l => (
               <div key={l.ts} className="flex items-center gap-3 bg-bg2 border border-border-dark rounded-xl px-3 py-3">
-                <span className="text-lg flex-shrink-0">{l.mode === 'training' ? '📚' : '⚡'}</span>
+                <span className="text-lg flex-shrink-0">{l.mode === 'training' ? '📚' : l.mode === 'counting' ? '🔢' : '⚡'}</span>
                 <div className="flex-1 min-w-0">
                   <div className="text-[12px] font-bold">
-                    {l.mode === 'training' ? 'Mode Latihan' : 'Takt Time Challenge'} {l.lineStop ? '⛔' : '✅'}
+                    {l.mode === 'training' ? 'Mode Latihan' : l.mode === 'counting' ? 'Mode Hitung' : 'Takt Time Challenge'} {l.lineStop ? '⛔' : '✅'}
                   </div>
                   <div className="text-[10px] text-text3 mt-0.5">
                     {new Date(l.ts).toLocaleString('id-ID')} · Target: {l.target} kg · {l.wrongAnswers} salah

@@ -37,6 +37,16 @@ export function getLeaderboard() {
   return Object.values(map).sort((a, b) => b.bestScore - a.bestScore)
 }
 
+const DEFAULT_TARGETS = { accuracy: 90, bestScore: 500, streak: 5, sessionsPerWeek: 7 }
+export const getPersonalTargets  = (noreg) => ({ ...DEFAULT_TARGETS, ...JSON.parse(localStorage.getItem(`fcs_targets_${noreg}`) || '{}') })
+export const savePersonalTargets = (noreg, t) => localStorage.setItem(`fcs_targets_${noreg}`, JSON.stringify(t))
+
+export function getWeeklyStats(noreg) {
+  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
+  const logs    = getLogs().filter(l => l.noreg === noreg && l.ts >= weekAgo)
+  return { sessions: logs.length, noLineStop: logs.filter(l => !l.lineStop).length }
+}
+
 export function hashColor(s) {
   let h = 0
   for (let i = 0; i < s.length; i++) h = s.charCodeAt(i) + ((h << 5) - h)
