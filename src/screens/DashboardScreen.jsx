@@ -92,7 +92,7 @@ export default function DashboardScreen({ currentUser, onMode, onLogout, onLeade
             <div className="w-12 h-12 rounded-xl bg-yellow/10 flex items-center justify-center text-2xl flex-shrink-0">🔢</div>
             <div className="flex-1">
               <div className="text-sm font-black mb-1">Mode Hitung</div>
-              <div className="text-[12px] text-text2 leading-snug">{settings.minScrap}x angka muncul tiap 5 detik. Hafal lalu jumlahkan! Salah = LINE STOP!</div>
+              <div className="text-[12px] text-text2 leading-snug">Level 1–5 · Makin sulit, makin banyak angka & makin cepat. Hafal lalu jumlahkan!</div>
             </div>
             <span className="text-text3 text-lg">›</span>
           </button>

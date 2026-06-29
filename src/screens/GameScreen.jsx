@@ -120,8 +120,8 @@ export default function GameScreen({ config, onEnd, onQuit, showToast }) {
     }
   }, [ansVal, mode, target, onEnd, showToast])
 
-  function npPress(n) { setAnsVal(v => v.length < 6 ? v + n : v); setFeedback(null) }
-  function npDel()    { setAnsVal(v => v.slice(0, -1)) }
+  function npPress(n) { setAnsVal(v => v.length < 6 ? v + n : v); setFeedback(f => f?.ok ? f : null) }
+  function npDel()    { setAnsVal(v => v.slice(0, -1)); setFeedback(f => f?.ok ? f : null) }
 
   function handleCloseLs() {
     setShowLS(false)
@@ -224,7 +224,7 @@ export default function GameScreen({ config, onEnd, onQuit, showToast }) {
           <input
             type="number"
             value={ansVal}
-            onChange={e => { setAnsVal(e.target.value); setFeedback(null) }}
+            onChange={e => { setAnsVal(e.target.value); setFeedback(f => f?.ok ? f : null) }}
             onKeyDown={e => e.key === 'Enter' && submit()}
             placeholder="—"
             inputMode="numeric"

@@ -52,14 +52,20 @@ input[type=number] {
 .animate-flashR { animation: flashR 0.4s ease; }
 .animate-toastIn { animation: toastIn 0.2s ease; }
 
-@keyframes scrollIn {
-  0%   { transform: translateY(-60px) scale(0.85); opacity: 0; }
-  60%  { transform: translateY(6px)   scale(1.04); opacity: 1; }
+@keyframes scrollInBottom {
+  0%   { transform: translateY(120px) scale(0.85); opacity: 0; }
+  60%  { transform: translateY(-8px)  scale(1.02); opacity: 1; }
   100% { transform: translateY(0)     scale(1);    opacity: 1; }
+}
+@keyframes scrollOutTop {
+  0%   { transform: translateY(0);      opacity: 1; }
+  30%  { transform: translateY(-20px);  opacity: 0.7; }
+  100% { transform: translateY(-120px); opacity: 0; }
 }
 @keyframes countPulse {
   0%, 100% { transform: scale(1); }
   50%       { transform: scale(1.08); }
 }
-.animate-scrollIn   { animation: scrollIn 0.45s cubic-bezier(.22,1,.36,1) both; }
-.animate-countPulse { animation: countPulse 1s ease infinite; }
+.animate-scrollInBottom { animation: scrollInBottom 0.75s cubic-bezier(.16,1,.3,1) both; }
+.animate-scrollOutTop   { animation: scrollOutTop   0.6s  cubic-bezier(.4,0,1,1) both; }
+.animate-countPulse     { animation: countPulse 1s ease infinite; }

@@ -3,27 +3,98 @@ import { playSound } from '../lib/audio.js'
 import Confetti from '../components/Confetti.jsx'
 import LineStopOverlay from '../components/LineStopOverlay.jsx'
 
-const SHOW_SECONDS = 5
+const MIN_SUM = 1300
 
-function generateNumbers(count = 7) {
-  const nums = []
-  for (let i = 0; i < count; i++) {
-    nums.push((Math.floor(Math.random() * 30) + 1) * 10)
-  }
+const LEVELS = [
+  {
+    level: 1,
+    title: 'Pemula',
+    desc: '8 angka · 5 dtk/angka · kelipatan 100',
+    hint: 'Angka bulat ratusan, waktu santai. Cocok buat pemanasan.',
+    count: 8,
+    seconds: 5,
+    // 100, 200, 300, 400 — avg 250, total avg 2000
+    generate: () => (Math.floor(Math.random() * 4) + 1) * 100,
+    colorTxt: 'text-green',
+    colorBg: 'bg-green/10',
+    colorBorder: 'border-green/30',
+    scoreBonus: 0,
+  },
+  {
+    level: 2,
+    title: 'Mudah',
+    desc: '10 angka · 4 dtk/angka · kelipatan 50',
+    hint: 'Kelipatan 50, lebih banyak angka. Mulai fokus.',
+    count: 10,
+    seconds: 4,
+    // 50–300 kelipatan 50 — avg 175, total avg 1750
+    generate: () => (Math.floor(Math.random() * 6) + 1) * 50,
+    colorTxt: 'text-blue',
+    colorBg: 'bg-blue/10',
+    colorBorder: 'border-blue/30',
+    scoreBonus: 30,
+  },
+  {
+    level: 3,
+    title: 'Sedang',
+    desc: '12 angka · 3 dtk/angka · kelipatan 10',
+    hint: 'Kelipatan 10, makin banyak & cepat. Perlu konsentrasi.',
+    count: 12,
+    seconds: 3,
+    // 50–200 kelipatan 10 — avg 125, total avg 1500
+    generate: () => (Math.floor(Math.random() * 16) + 5) * 10,
+    colorTxt: 'text-yellow',
+    colorBg: 'bg-yellow/10',
+    colorBorder: 'border-yellow/30',
+    scoreBonus: 70,
+  },
+  {
+    level: 4,
+    title: 'Sulit',
+    desc: '14 angka · 2 dtk/angka · kelipatan 5',
+    hint: 'Kelipatan 5, flash kilat. Butuh strategi & memori kuat.',
+    count: 14,
+    seconds: 2,
+    // 50–150 kelipatan 5 — avg 100, total avg 1400
+    generate: () => (Math.floor(Math.random() * 21) + 10) * 5,
+    colorTxt: 'text-red2',
+    colorBg: 'bg-red/10',
+    colorBorder: 'border-red/30',
+    scoreBonus: 150,
+  },
+  {
+    level: 5,
+    title: 'Ekstrem',
+    desc: '16 angka · 1.5 dtk/angka · sembarang',
+    hint: 'Angka bebas 50–150, 16 flash kilat. Batas kemampuan!',
+    count: 16,
+    seconds: 1.5,
+    // 50–150 sembarang — avg 100, total avg 1600
+    generate: () => Math.floor(Math.random() * 101) + 50,
+    colorTxt: 'text-red',
+    colorBg: 'bg-red/10',
+    colorBorder: 'border-red/30',
+    scoreBonus: 300,
+  },
+]
+
+function generateNumbers(levelCfg) {
+  let nums
+  do {
+    nums = Array.from({ length: levelCfg.count }, () => levelCfg.generate())
+  } while (nums.reduce((a, b) => a + b, 0) < MIN_SUM)
   return nums
 }
 
 export default function CountingGameScreen({ config, onEnd, onQuit, showToast }) {
-  const { minScrap = 7 } = config
-
-  const [numbers] = useState(() => generateNumbers(minScrap))
-  const total = numbers.reduce((a, b) => a + b, 0)
-
-  // phase: 'watching' | 'inputting'
-  const [phase, setPhase]           = useState('watching')
+  // phase: 'select' | 'watching' | 'inputting'
+  const [phase, setPhase]           = useState('select')
+  const [levelCfg, setLevelCfg]     = useState(null)
+  const [numbers, setNumbers]       = useState([])
   const [currentIdx, setCurrentIdx] = useState(0)
-  const [countdown, setCountdown]   = useState(SHOW_SECONDS)
+  const [countdown, setCountdown]   = useState(0)
   const [animKey, setAnimKey]       = useState(0)
+  const [prevNum, setPrevNum]       = useState(null)
 
   const [ansVal, setAnsVal]             = useState('')
   const [shake, setShake]               = useState(false)
@@ -37,6 +108,56 @@ export default function CountingGameScreen({ config, onEnd, onQuit, showToast })
   const [calcPrev, setCalcPrev]   = useState(null)
   const [calcOp, setCalcOp]       = useState(null)
   const [calcFresh, setCalcFresh] = useState(true)
+
+  const startTime    = useRef(Date.now())
+  const exitTimerRef = useRef(null)
+
+  function selectLevel(cfg) {
+    const nums = generateNumbers(cfg)
+    setLevelCfg(cfg)
+    setNumbers(nums)
+    setCurrentIdx(0)
+    setPrevNum(null)
+    setCountdown(Math.ceil(cfg.seconds))
+    setAnimKey(0)
+    startTime.current = Date.now()
+    setPhase('watching')
+  }
+
+  useEffect(() => {
+    if (phase !== 'watching' || !levelCfg) return
+
+    // Show previous number exiting upward for 360ms
+    if (exitTimerRef.current) clearTimeout(exitTimerRef.current)
+    if (currentIdx > 0) {
+      setPrevNum(numbers[currentIdx - 1])
+      exitTimerRef.current = setTimeout(() => setPrevNum(null), 620)
+    } else {
+      setPrevNum(null)
+    }
+
+    setCountdown(Math.ceil(levelCfg.seconds))
+    setAnimKey(k => k + 1)
+
+    const tick = setInterval(() => {
+      setCountdown(c => (c > 1 ? c - 1 : c))
+    }, 1000)
+
+    const advance = setTimeout(() => {
+      if (currentIdx + 1 >= numbers.length) {
+        setPhase('inputting')
+      } else {
+        setCurrentIdx(i => i + 1)
+      }
+    }, levelCfg.seconds * 1000)
+
+    return () => {
+      clearInterval(tick)
+      clearTimeout(advance)
+    }
+  }, [phase, currentIdx, numbers.length, levelCfg])
+
+  const total = numbers.reduce((a, b) => a + b, 0)
 
   function calcApply(a, b, op) {
     if (op === '+') return a + b
@@ -80,32 +201,6 @@ export default function CountingGameScreen({ config, onEnd, onQuit, showToast })
     if (!isNaN(v)) setAnsVal(String(v))
   }
 
-  const startTime = useRef(Date.now())
-
-  useEffect(() => {
-    if (phase !== 'watching') return
-
-    setCountdown(SHOW_SECONDS)
-    setAnimKey(k => k + 1)
-
-    const tick = setInterval(() => {
-      setCountdown(c => (c > 1 ? c - 1 : c))
-    }, 1000)
-
-    const advance = setTimeout(() => {
-      if (currentIdx + 1 >= numbers.length) {
-        setPhase('inputting')
-      } else {
-        setCurrentIdx(i => i + 1)
-      }
-    }, SHOW_SECONDS * 1000)
-
-    return () => {
-      clearInterval(tick)
-      clearTimeout(advance)
-    }
-  }, [phase, currentIdx, numbers.length])
-
   const submit = useCallback(() => {
     const answer = parseInt(ansVal)
     if (isNaN(answer) || answer <= 0) { showToast('Masukkan angka!'); return }
@@ -120,12 +215,13 @@ export default function CountingGameScreen({ config, onEnd, onQuit, showToast })
         onEnd({
           mode:         'counting',
           target:       total,
-          score:        100 + numbers.length * 5,
+          score:        100 + (levelCfg?.scoreBonus ?? 0) + numbers.length * 10,
           maxStreak:    numbers.length,
           totalAnswers: 1,
           wrongAnswers: 0,
           lineStop:     false,
           duration,
+          level:        levelCfg?.level ?? 1,
         })
       }, 1800)
     } else {
@@ -137,7 +233,7 @@ export default function CountingGameScreen({ config, onEnd, onQuit, showToast })
       setShowLS(true)
       playSound('linestop')
     }
-  }, [ansVal, total, numbers, onEnd, showToast])
+  }, [ansVal, total, numbers, onEnd, showToast, levelCfg])
 
   function handleCloseLs() {
     setShowLS(false)
@@ -150,6 +246,7 @@ export default function CountingGameScreen({ config, onEnd, onQuit, showToast })
       wrongAnswers: 1,
       lineStop:     true,
       duration:     Math.round((Date.now() - startTime.current) / 1000),
+      level:        levelCfg?.level ?? 1,
     })
   }
 
@@ -158,6 +255,55 @@ export default function CountingGameScreen({ config, onEnd, onQuit, showToast })
 
   const currentNum = numbers[currentIdx] ?? 0
 
+  // ─── Level Select ────────────────────────────────────────────────
+  if (phase === 'select') {
+    return (
+      <div className="min-h-[100dvh] bg-bg flex flex-col">
+        <div className="sticky top-0 z-20 bg-bg2 border-b border-border-dark px-4 h-[52px] flex items-center gap-3 flex-shrink-0">
+          <button onClick={onQuit} className="w-9 h-9 flex items-center justify-center rounded-md text-text2 text-xl font-light active:bg-bg3 active:text-text transition-colors">‹</button>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-[13px] font-black leading-tight">🔢 Mode Hitung</h2>
+            <p className="text-[10px] text-text2 mt-[1px]">Pilih tingkat kesulitan</p>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
+          <p className="text-[11px] font-bold text-text2 uppercase tracking-[1.2px] mb-1">Pilih Level</p>
+
+          {LEVELS.map(cfg => (
+            <button
+              key={cfg.level}
+              onClick={() => selectLevel(cfg)}
+              className={`flex items-start gap-4 ${cfg.colorBg} border ${cfg.colorBorder} rounded-xl p-4 text-left w-full active:scale-[.98] transition-all`}
+            >
+              <div className={`w-11 h-11 rounded-xl bg-bg2 border ${cfg.colorBorder} flex items-center justify-center flex-shrink-0`}>
+                <span className={`text-[15px] font-black tabular-nums ${cfg.colorTxt}`}>{cfg.level}</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className={`text-[14px] font-black ${cfg.colorTxt}`}>{cfg.title}</span>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${cfg.colorBg} border ${cfg.colorBorder} ${cfg.colorTxt}`}>
+                    +{cfg.scoreBonus} bonus
+                  </span>
+                </div>
+                <div className="text-[11px] font-semibold text-text mb-1">{cfg.desc}</div>
+                <div className="text-[10px] text-text2 leading-relaxed">{cfg.hint}</div>
+              </div>
+              <span className="text-text3 text-lg flex-shrink-0">›</span>
+            </button>
+          ))}
+
+          <div className="mt-2 px-1">
+            <p className="text-[10px] text-text3 text-center">
+              Total target max ≈ 2000 · Skor lebih tinggi di level sulit
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ─── Watching / Inputting ────────────────────────────────────────
   return (
     <div className="min-h-[100dvh] bg-bg flex flex-col">
       {/* Header */}
@@ -169,8 +315,8 @@ export default function CountingGameScreen({ config, onEnd, onQuit, showToast })
             {phase === 'watching' ? 'Hafal dan jumlahkan semua angka' : 'Masukkan total dari semua angka!'}
           </p>
         </div>
-        <div className="flex items-center gap-1 bg-bg3 border border-border-dark rounded-full px-2.5 py-1 text-[11px] font-bold text-text2 flex-shrink-0">
-          {numbers.length}x angka
+        <div className={`flex items-center gap-1 ${levelCfg?.colorBg} border ${levelCfg?.colorBorder} rounded-full px-2.5 py-1 text-[11px] font-bold ${levelCfg?.colorTxt} flex-shrink-0`}>
+          Lv.{levelCfg?.level} {levelCfg?.title}
         </div>
       </div>
 
@@ -189,7 +335,7 @@ export default function CountingGameScreen({ config, onEnd, onQuit, showToast })
             <span className="text-[11px] font-bold text-text2 uppercase tracking-[1px]">
               Angka ke-{currentIdx + 1} dari {numbers.length}
             </span>
-            <div className="flex gap-1.5">
+            <div className="flex gap-1.5 flex-wrap justify-end max-w-[60%]">
               {numbers.map((_, i) => (
                 <div
                   key={i}
@@ -208,20 +354,37 @@ export default function CountingGameScreen({ config, onEnd, onQuit, showToast })
             </div>
 
             {/* Scroll ticker */}
-            <div className="relative w-full max-w-[280px] h-[180px] bg-bg2 border-2 border-border-dark rounded-2xl flex items-center justify-center overflow-hidden">
-              <div className="absolute inset-x-0 top-0 h-10 bg-gradient-to-b from-bg2 to-transparent z-10 pointer-events-none" />
-              <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-bg2 to-transparent z-10 pointer-events-none" />
-              <div key={animKey} className="animate-scrollIn text-center">
-                <div className="text-[88px] font-black leading-none tabular-nums tracking-[-3px] text-text">
-                  {currentNum}
+            <div className="relative w-full max-w-[280px] h-[180px] bg-bg2 border-2 border-border-dark rounded-2xl overflow-hidden">
+              {/* Gradient overlays */}
+              <div className="absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-bg2 to-transparent z-20 pointer-events-none" />
+              <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-bg2 to-transparent z-20 pointer-events-none" />
+
+              {/* Exiting number — slides out upward */}
+              {prevNum !== null && (
+                <div className="animate-scrollOutTop absolute inset-0 flex items-center justify-center z-10">
+                  <div className="text-center">
+                    <div className="text-[88px] font-black leading-none tabular-nums tracking-[-3px] text-text">
+                      {prevNum}
+                    </div>
+                    <div className="text-[18px] text-text2 mt-1">kg</div>
+                  </div>
                 </div>
-                <div className="text-[18px] text-text2 mt-1">kg</div>
+              )}
+
+              {/* Entering number — slides in from below */}
+              <div key={animKey} className="animate-scrollInBottom absolute inset-0 flex items-center justify-center z-10">
+                <div className="text-center">
+                  <div className="text-[88px] font-black leading-none tabular-nums tracking-[-3px] text-text">
+                    {currentNum}
+                  </div>
+                  <div className="text-[18px] text-text2 mt-1">kg</div>
+                </div>
               </div>
             </div>
 
             {/* Countdown */}
             <div className="mt-8 flex flex-col items-center gap-2">
-              <div className={`text-[42px] font-black tabular-nums leading-none ${countdown <= 2 ? 'text-red animate-countPulse' : 'text-text2'}`}>
+              <div className={`text-[42px] font-black tabular-nums leading-none ${countdown <= 1 ? 'text-red animate-countPulse' : 'text-text2'}`}>
                 {countdown}
               </div>
               <div className="text-[10px] font-bold text-text3 uppercase tracking-[1.5px]">
@@ -273,7 +436,7 @@ export default function CountingGameScreen({ config, onEnd, onQuit, showToast })
                 {/* Display */}
                 <div className="px-3 pt-3 pb-2">
                   <div className="text-[10px] font-bold text-text3 uppercase tracking-[1px] mb-1">
-                    {calcOp ? `${calcPrev} ${calcOp}` : ' '}
+                    {calcOp ? `${calcPrev} ${calcOp}` : ' '}
                   </div>
                   <div className="text-right text-[32px] font-black tabular-nums text-text leading-none truncate">
                     {calcDisp}
@@ -282,7 +445,6 @@ export default function CountingGameScreen({ config, onEnd, onQuit, showToast })
 
                 {/* Buttons */}
                 <div className="grid grid-cols-4 gap-[5px] p-2">
-                  {/* Row 1 */}
                   <button onClick={calcClear}
                     className="col-span-2 h-11 bg-bg3 border border-border-dark rounded-lg text-[13px] font-bold text-red2 active:scale-[.91] active:bg-bg4 transition-transform">
                     C
@@ -296,7 +458,6 @@ export default function CountingGameScreen({ config, onEnd, onQuit, showToast })
                     ×
                   </button>
 
-                  {/* Row 2 */}
                   {[7,8,9].map(n => (
                     <button key={n} onClick={() => calcNum(String(n))}
                       className="h-11 bg-bg3 border border-border-dark rounded-lg text-[17px] font-bold text-text active:scale-[.91] active:bg-bg4 transition-transform">
@@ -308,7 +469,6 @@ export default function CountingGameScreen({ config, onEnd, onQuit, showToast })
                     −
                   </button>
 
-                  {/* Row 3 */}
                   {[4,5,6].map(n => (
                     <button key={n} onClick={() => calcNum(String(n))}
                       className="h-11 bg-bg3 border border-border-dark rounded-lg text-[17px] font-bold text-text active:scale-[.91] active:bg-bg4 transition-transform">
@@ -320,7 +480,6 @@ export default function CountingGameScreen({ config, onEnd, onQuit, showToast })
                     +
                   </button>
 
-                  {/* Row 4 */}
                   {[1,2,3].map(n => (
                     <button key={n} onClick={() => calcNum(String(n))}
                       className="h-11 bg-bg3 border border-border-dark rounded-lg text-[17px] font-bold text-text active:scale-[.91] active:bg-bg4 transition-transform">
@@ -332,7 +491,6 @@ export default function CountingGameScreen({ config, onEnd, onQuit, showToast })
                     =
                   </button>
 
-                  {/* Row 5 */}
                   <button onClick={() => calcNum('0')}
                     className="col-span-2 h-11 bg-bg3 border border-border-dark rounded-lg text-[17px] font-bold text-text active:scale-[.91] active:bg-bg4 transition-transform">
                     0
@@ -343,7 +501,6 @@ export default function CountingGameScreen({ config, onEnd, onQuit, showToast })
                   </button>
                 </div>
 
-                {/* Use result button */}
                 <div className="px-2 pb-2">
                   <button onClick={useCalcResult}
                     className="w-full h-10 bg-green/20 border border-green/40 rounded-lg text-[12px] font-black text-green active:bg-green/30 transition-colors">
