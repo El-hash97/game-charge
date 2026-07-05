@@ -2,8 +2,10 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { playSound } from '../lib/audio.js'
 import Confetti from '../components/Confetti.jsx'
 import LineStopOverlay from '../components/LineStopOverlay.jsx'
+import { getLogs } from '../lib/storage.js'
 
 const MIN_SUM = 1300
+const FORCE_UNLOCK_PASSWORD = 'El123'
 
 const LEVELS = [
   {
@@ -86,7 +88,14 @@ function generateNumbers(levelCfg) {
   return nums
 }
 
-export default function CountingGameScreen({ config, onEnd, onQuit, showToast }) {
+function isLevelUnlocked(level, noreg) {
+  if (level <= 1) return true
+  return getLogs().some(l =>
+    l.noreg === noreg && l.mode === 'counting' && l.level === level - 1 && l.lineStop === false
+  )
+}
+
+export default function CountingGameScreen({ config, currentUser, onEnd, onQuit, showToast }) {
   // phase: 'select' | 'watching' | 'inputting'
   const [phase, setPhase]           = useState('select')
   const [levelCfg, setLevelCfg]     = useState(null)
@@ -95,6 +104,11 @@ export default function CountingGameScreen({ config, onEnd, onQuit, showToast })
   const [countdown, setCountdown]   = useState(0)
   const [animKey, setAnimKey]       = useState(0)
   const [prevNum, setPrevNum]       = useState(null)
+
+  // Level lock state
+  const [unlockTarget, setUnlockTarget] = useState(null) // level cfg pending password entry
+  const [pwInput, setPwInput]           = useState('')
+  const [pwError, setPwError]           = useState(false)
 
   const [ansVal, setAnsVal]             = useState('')
   const [shake, setShake]               = useState(false)
@@ -122,6 +136,29 @@ export default function CountingGameScreen({ config, onEnd, onQuit, showToast })
     setAnimKey(0)
     startTime.current = Date.now()
     setPhase('watching')
+  }
+
+  function openUnlockModal(cfg) {
+    setUnlockTarget(cfg)
+    setPwInput('')
+    setPwError(false)
+  }
+
+  function closeUnlockModal() {
+    setUnlockTarget(null)
+    setPwInput('')
+    setPwError(false)
+  }
+
+  function submitUnlock() {
+    if (pwInput === FORCE_UNLOCK_PASSWORD) {
+      const cfg = unlockTarget
+      closeUnlockModal()
+      selectLevel(cfg)
+    } else {
+      setPwError(true)
+      showToast('Password salah!')
+    }
   }
 
   useEffect(() => {
@@ -270,28 +307,56 @@ export default function CountingGameScreen({ config, onEnd, onQuit, showToast })
         <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
           <p className="text-[11px] font-bold text-text2 uppercase tracking-[1.2px] mb-1">Pilih Level</p>
 
-          {LEVELS.map(cfg => (
-            <button
-              key={cfg.level}
-              onClick={() => selectLevel(cfg)}
-              className={`flex items-start gap-4 ${cfg.colorBg} border ${cfg.colorBorder} rounded-xl p-4 text-left w-full active:scale-[.98] transition-all`}
-            >
-              <div className={`w-11 h-11 rounded-xl bg-bg2 border ${cfg.colorBorder} flex items-center justify-center flex-shrink-0`}>
-                <span className={`text-[15px] font-black tabular-nums ${cfg.colorTxt}`}>{cfg.level}</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-0.5">
-                  <span className={`text-[14px] font-black ${cfg.colorTxt}`}>{cfg.title}</span>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${cfg.colorBg} border ${cfg.colorBorder} ${cfg.colorTxt}`}>
-                    +{cfg.scoreBonus} bonus
-                  </span>
+          {LEVELS.map(cfg => {
+            const unlocked = isLevelUnlocked(cfg.level, currentUser?.noreg)
+            if (unlocked) {
+              return (
+                <button
+                  key={cfg.level}
+                  onClick={() => selectLevel(cfg)}
+                  className={`flex items-start gap-4 ${cfg.colorBg} border ${cfg.colorBorder} rounded-xl p-4 text-left w-full active:scale-[.98] transition-all`}
+                >
+                  <div className={`w-11 h-11 rounded-xl bg-bg2 border ${cfg.colorBorder} flex items-center justify-center flex-shrink-0`}>
+                    <span className={`text-[15px] font-black tabular-nums ${cfg.colorTxt}`}>{cfg.level}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className={`text-[14px] font-black ${cfg.colorTxt}`}>{cfg.title}</span>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${cfg.colorBg} border ${cfg.colorBorder} ${cfg.colorTxt}`}>
+                        +{cfg.scoreBonus} bonus
+                      </span>
+                    </div>
+                    <div className="text-[11px] font-semibold text-text mb-1">{cfg.desc}</div>
+                    <div className="text-[10px] text-text2 leading-relaxed">{cfg.hint}</div>
+                  </div>
+                  <span className="text-text3 text-lg flex-shrink-0">›</span>
+                </button>
+              )
+            }
+            return (
+              <div
+                key={cfg.level}
+                className="flex items-start gap-4 bg-bg2 border border-border-dark rounded-xl p-4 text-left w-full opacity-60"
+              >
+                <div className="w-11 h-11 rounded-xl bg-bg3 border border-border-dark flex items-center justify-center flex-shrink-0">
+                  <span className="text-[15px] text-text3">🔒</span>
                 </div>
-                <div className="text-[11px] font-semibold text-text mb-1">{cfg.desc}</div>
-                <div className="text-[10px] text-text2 leading-relaxed">{cfg.hint}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="text-[14px] font-black text-text2">{cfg.title}</span>
+                  </div>
+                  <div className="text-[11px] font-semibold text-text2 mb-1">{cfg.desc}</div>
+                  <div className="text-[10px] text-text3 leading-relaxed mb-2">Selesaikan Level {cfg.level - 1} dulu</div>
+                  <button
+                    onClick={() => openUnlockModal(cfg)}
+                    className="text-[10px] font-bold text-text2 underline underline-offset-2 active:text-text transition-colors"
+                  >
+                    🔒 Buka dengan password
+                  </button>
+                </div>
               </div>
-              <span className="text-text3 text-lg flex-shrink-0">›</span>
-            </button>
-          ))}
+            )
+          })}
 
           <div className="mt-2 px-1">
             <p className="text-[10px] text-text3 text-center">
@@ -299,6 +364,39 @@ export default function CountingGameScreen({ config, onEnd, onQuit, showToast })
             </p>
           </div>
         </div>
+
+        {unlockTarget && (
+          <div className="fixed inset-0 z-30 bg-black/60 flex items-center justify-center p-4">
+            <div className="bg-bg2 border border-border-dark rounded-2xl p-5 w-full max-w-[300px]">
+              <p className="text-[13px] font-black mb-1">Buka Paksa Level {unlockTarget.level}</p>
+              <p className="text-[11px] text-text2 mb-3">Masukkan password untuk membuka level ini satu kali main.</p>
+              <input
+                type="password"
+                value={pwInput}
+                onChange={e => { setPwInput(e.target.value); setPwError(false) }}
+                onKeyDown={e => e.key === 'Enter' && submitUnlock()}
+                autoFocus
+                className={`w-full px-3 py-2.5 bg-bg3 border-2 rounded-lg text-text text-[15px] font-bold text-center outline-none transition-colors
+                  ${pwError ? 'border-red2' : 'border-border-dark focus:border-red'}`}
+              />
+              {pwError && <p className="text-[10px] text-red2 mt-1.5 text-center">Password salah!</p>}
+              <div className="flex gap-2 mt-4">
+                <button
+                  onClick={closeUnlockModal}
+                  className="flex-1 h-11 bg-bg3 border border-border-dark rounded-lg text-[12px] font-bold text-text2 active:bg-bg4 transition-colors"
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={submitUnlock}
+                  className="flex-1 h-11 bg-red border border-red rounded-lg text-[12px] font-black text-white active:bg-red/70 transition-colors"
+                >
+                  Buka
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     )
   }

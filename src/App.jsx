@@ -91,6 +91,7 @@ export default function App() {
       lineStop:     result.lineStop,
       target:       result.target,
       duration:     result.duration,
+      level:        result.level,
       ts:           Date.now()
     }])
     setGameResult(result)
